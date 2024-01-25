@@ -15,8 +15,7 @@
 use std::sync::Arc;
 
 use risingwave_common::array::{Array, ArrayRef, BoolArray, DataChunk};
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum, Scalar, ScalarRefImpl};
+use risingwave_common::types::{DataType, ScalarRefImpl};
 use risingwave_common::util::iter_util::ZipEqFast;
 use risingwave_common::{bail, ensure};
 use risingwave_pb::expr::expr_node::{RexNode, Type};
@@ -179,30 +178,6 @@ impl Expression for SomeAllExpression {
                 .into(),
         ))
     }
-
-    async fn eval_row(&self, row: &OwnedRow) -> Result<Datum> {
-        let datum_left = self.left_expr.eval_row(row).await?;
-        let datum_right = self.right_expr.eval_row(row).await?;
-        let Some(array_right) = datum_right else {
-            return Ok(None);
-        };
-        let array_right = array_right.into_list().into_array();
-        let len = array_right.len();
-
-        // expand left to array
-        let array_left = {
-            let mut builder = self.left_expr.return_type().create_array_builder(len);
-            builder.append_n(len, datum_left);
-            builder.finish().into_ref()
-        };
-
-        let chunk = DataChunk::new(vec![array_left, Arc::new(array_right)], len);
-        let bools = self.func.eval(&chunk).await?;
-
-        Ok(self
-            .resolve_bools(bools.as_bool().iter())
-            .map(|b| b.to_scalar_value()))
-    }
 }
 
 impl Build for SomeAllExpression {
@@ -304,12 +279,6 @@ mod tests {
         // test eval
         let output = expr.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 
     #[tokio::test]
@@ -335,11 +304,5 @@ mod tests {
         // test eval
         let output = expr.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 }

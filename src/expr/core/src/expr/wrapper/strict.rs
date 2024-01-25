@@ -14,7 +14,6 @@
 
 use async_trait::async_trait;
 use risingwave_common::array::{ArrayRef, DataChunk};
-use risingwave_common::row::OwnedRow;
 use risingwave_common::types::{DataType, Datum};
 
 use crate::error::Result;
@@ -67,10 +66,6 @@ where
             Err(ExprError::Multiple(_, errors)) => Err(errors.into_first()),
             res => res,
         }
-    }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        self.inner.eval_row(input).await
     }
 
     fn eval_const(&self) -> Result<Datum> {

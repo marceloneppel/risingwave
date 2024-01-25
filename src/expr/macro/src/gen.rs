@@ -205,15 +205,9 @@ impl FunctionAttr {
         let non_prebuilt_inputs = idents("i", &non_prebuilt_indices);
         let array_refs = idents("array", &children_indices);
         let arrays = idents("a", &children_indices);
-        let datums = idents("v", &children_indices);
         let arg_arrays = children_indices
             .iter()
             .map(|i| format_ident!("{}", types::array_type(&self.args[*i])));
-        let arg_types = children_indices.iter().map(|i| {
-            types::ref_type(&self.args[*i])
-                .parse::<TokenStream2>()
-                .unwrap()
-        });
         let annotation: TokenStream2 = match user_fn.core_return_type.as_str() {
             // add type annotation for functions that return generic types
             "T" | "T1" | "T2" | "T3" => format!(": Option<{}>", types::owned_type(&self.ret))
@@ -278,16 +272,6 @@ impl FunctionAttr {
                     columns.push(child.eval(input).await?);
                 }
                 let variadic_input = DataChunk::new(columns, input.visibility().clone());
-            }
-        });
-        // evaluate variadic arguments in `eval_row`
-        let eval_row_variadic = variadic.then(|| {
-            quote! {
-                let mut row = Vec::with_capacity(self.children.len() - #num_args);
-                for child in &self.children[#num_args..] {
-                    row.push(child.eval_row(input).await?);
-                }
-                let variadic_row = OwnedRow::new(row);
             }
         });
 
@@ -385,20 +369,6 @@ impl FunctionAttr {
                 let output #annotation = #output;
                 builder.append(output.as_ref().map(|s| s.as_scalar_ref()));
             },
-        };
-        // the output expression in `eval_row`
-        let row_output = match user_fn.write {
-            true => quote! {{
-                let mut writer = String::new();
-                #output.map(|_| writer.into())
-            }},
-            false if user_fn.core_return_type == "impl AsRef < [u8] >" => quote! {
-                #output.map(|s| s.as_ref().into())
-            },
-            false => quote! {{
-                let output #annotation = #output;
-                output.map(|s| s.into())
-            }},
         };
         // the main body in `eval`
         let eval = if let Some(batch_fn) = &self.batch_fn {
@@ -526,20 +496,6 @@ impl FunctionAttr {
                             Ok(array)
                         } else {
                             Err(ExprError::Multiple(array, errors.into()))
-                        }
-                    }
-                    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-                        #(
-                            let #datums = self.children[#children_indices].eval_row(input).await?;
-                            let #inputs: Option<#arg_types> = #datums.as_ref().map(|s| s.as_scalar_ref_impl().try_into().unwrap());
-                        )*
-                        #eval_row_variadic
-                        let mut errors: Vec<ExprError> = vec![];
-                        let output = #row_output;
-                        if let Some(err) = errors.into_iter().next() {
-                            Err(err.into())
-                        } else {
-                            Ok(output)
                         }
                     }
                 }

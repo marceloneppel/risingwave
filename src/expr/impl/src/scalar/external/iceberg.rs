@@ -18,15 +18,13 @@ use std::fmt::Formatter;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use arrow_schema::DataType as ArrowDataType;
 use icelake::types::{
     create_transform_function, Any as IcelakeDataType, BoxedTransformFunction, Transform,
 };
 use risingwave_common::array::{ArrayRef, DataChunk};
 use risingwave_common::ensure;
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum};
+use risingwave_common::types::DataType;
 use risingwave_expr::expr::BoxedExpression;
 use risingwave_expr::{build_function, ExprError, Result};
 use thiserror_ext::AsReport;
@@ -61,12 +59,6 @@ impl risingwave_expr::expr::Expression for IcebergTransform {
         let res_array = self.transform.transform(arrow_array).unwrap();
         // Convert back to array ref and return it
         Ok(Arc::new((&res_array).try_into().unwrap()))
-    }
-
-    async fn eval_row(&self, _row: &OwnedRow) -> Result<Datum> {
-        Err(ExprError::Internal(anyhow!(
-            "eval_row in iceberg_transform is not supported yet"
-        )))
     }
 }
 

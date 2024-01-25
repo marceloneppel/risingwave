@@ -711,16 +711,6 @@ mod tests {
             let x = target[idx].as_ref().map(|x| x.as_scalar_ref());
             assert_eq!(x, item);
         }
-
-        for i in 0..lhs.len() {
-            let row = OwnedRow::new(vec![
-                lhs[i].map(|int| int.to_scalar_value()),
-                rhs[i].map(|int| int.to_scalar_value()),
-            ]);
-            let result = expr.eval_row(&row).await.unwrap();
-            let expected = target[i].as_ref().cloned().map(|x| x.to_scalar_value());
-            assert_eq!(result, expected);
-        }
     }
 
     async fn test_binary_i32<A, F>(f: F, kind: Type)

@@ -18,8 +18,7 @@ use std::sync::Arc;
 
 use futures_util::FutureExt;
 use risingwave_common::array::{ArrayBuilder, ArrayRef, BoolArrayBuilder, DataChunk};
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum, Scalar, ToOwnedDatum};
+use risingwave_common::types::{DataType, Datum, ToOwnedDatum};
 use risingwave_common::util::iter_util::ZipEqFast;
 use risingwave_expr::expr::{BoxedExpression, Expression};
 use risingwave_expr::{build_function, Result};
@@ -79,12 +78,6 @@ impl Expression for InExpression {
         }
         Ok(Arc::new(output_array.finish().into()))
     }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        let data = self.left.eval_row(input).await?;
-        let ret = self.exists(&data);
-        Ok(ret.map(|b| b.to_scalar_value()))
-    }
 }
 
 #[build_function("in(any, ...) -> boolean")]
@@ -133,12 +126,6 @@ mod tests {
         // test eval
         let output = expr.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 
     #[tokio::test]
@@ -155,11 +142,5 @@ mod tests {
         // test eval
         let output = expr.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 }

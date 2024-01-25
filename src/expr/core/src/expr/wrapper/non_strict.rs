@@ -18,7 +18,6 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use risingwave_common::array::{ArrayRef, DataChunk};
 use risingwave_common::log::LogSuppresser;
-use risingwave_common::row::OwnedRow;
 use risingwave_common::types::{DataType, Datum};
 use thiserror_ext::AsReport;
 
@@ -133,17 +132,6 @@ where
                     value: None,
                     capacity: input.capacity(),
                 }
-            }
-        })
-    }
-
-    /// Evaluate expression on a single row, report error and return NULL if failed.
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        Ok(match self.inner.eval_row(input).await {
-            Ok(datum) => datum,
-            Err(error) => {
-                self.report.report(error);
-                None // NULL
             }
         })
     }

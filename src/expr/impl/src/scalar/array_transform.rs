@@ -16,8 +16,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use risingwave_common::array::{ArrayRef, DataChunk};
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum, ListValue, ScalarImpl};
+use risingwave_common::types::DataType;
 use risingwave_expr::expr::{BoxedExpression, Expression};
 use risingwave_expr::{build_function, Result};
 
@@ -44,20 +43,6 @@ impl Expression for ArrayTransformExpression {
             })
             .await?;
         Ok(Arc::new(new_list.into()))
-    }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        let lambda_input = self.array.eval_row(input).await?;
-        let lambda_input = lambda_input.map(ScalarImpl::into_list);
-        if let Some(lambda_input) = lambda_input {
-            let len = lambda_input.len();
-            let chunk = DataChunk::new(vec![Arc::new(lambda_input.into_array())], len);
-            let new_vals = self.lambda.eval(&chunk).await?;
-            let new_list = ListValue::new(Arc::unwrap_or_clone(new_vals));
-            Ok(Some(new_list.into()))
-        } else {
-            Ok(None)
-        }
     }
 }
 
@@ -88,11 +73,5 @@ mod tests {
         // test eval
         let output = expr.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 }

@@ -16,8 +16,7 @@ use std::ops::BitAnd;
 use std::sync::Arc;
 
 use risingwave_common::array::{ArrayRef, DataChunk};
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum};
+use risingwave_common::types::DataType;
 use risingwave_expr::expr::{BoxedExpression, Expression};
 use risingwave_expr::{build_function, Result};
 
@@ -62,16 +61,6 @@ impl Expression for CoalesceExpression {
         }
         Ok(Arc::new(builder.finish()))
     }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        for child in &self.children {
-            let datum = child.eval_row(input).await?;
-            if datum.is_some() {
-                return Ok(datum);
-            }
-        }
-        Ok(None)
-    }
 }
 
 #[build_function("coalesce(...) -> any", type_infer = "panic")]
@@ -106,11 +95,5 @@ mod tests {
         // test eval
         let output = expr.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 }

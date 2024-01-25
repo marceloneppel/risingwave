@@ -14,8 +14,7 @@
 
 use anyhow::anyhow;
 use risingwave_common::array::{ArrayImpl, ArrayRef, DataChunk};
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum, ScalarImpl};
+use risingwave_common::types::DataType;
 use risingwave_expr::expr::{BoxedExpression, Expression};
 use risingwave_expr::{build_function, Result};
 
@@ -40,17 +39,6 @@ impl Expression for FieldExpression {
         } else {
             Err(anyhow!("expects a struct array ref").into())
         }
-    }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        let struct_datum = self.input.eval_row(input).await?;
-        struct_datum
-            .map(|s| match s {
-                ScalarImpl::Struct(v) => Ok(v.fields()[self.index].clone()),
-                _ => Err(anyhow!("expects a struct array ref").into()),
-            })
-            .transpose()
-            .map(|x| x.flatten())
     }
 }
 
@@ -89,11 +77,5 @@ mod tests {
         // test eval
         let output = expr.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 }

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use risingwave_common::array::DataChunk;
-use risingwave_common::row::OwnedRow;
 use risingwave_common::types::{literal_type_match, DataType, Datum};
 use risingwave_common::util::value_encoding::DatumFromProtoExt;
 use risingwave_pb::expr::ExprNode;
@@ -40,10 +39,6 @@ impl Expression for LiteralExpression {
             value: self.literal.clone(),
             capacity: input.capacity(),
         })
-    }
-
-    async fn eval_row(&self, _input: &OwnedRow) -> Result<Datum> {
-        Ok(self.literal.as_ref().cloned())
     }
 
     fn eval_const(&self) -> Result<Datum> {
@@ -219,12 +214,5 @@ mod tests {
         let literal = LiteralExpression::new(DataType::Int32, Some(1.into()));
         let result = literal.eval(&DataChunk::new_dummy(1)).await.unwrap();
         assert_eq!(*result, I32Array::from_iter([1]).into());
-    }
-
-    #[tokio::test]
-    async fn test_literal_eval_row_dummy_chunk() {
-        let literal = LiteralExpression::new(DataType::Int32, Some(1.into()));
-        let result = literal.eval_row(&OwnedRow::new(vec![])).await.unwrap();
-        assert_eq!(result, Some(1.into()))
     }
 }

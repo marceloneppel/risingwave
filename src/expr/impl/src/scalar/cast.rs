@@ -17,12 +17,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use futures_util::FutureExt;
-use itertools::Itertools;
 use risingwave_common::array::{ArrayImpl, DataChunk, ListRef, ListValue, StructRef, StructValue};
 use risingwave_common::cast;
-use risingwave_common::row::OwnedRow;
 use risingwave_common::types::{Int256, IntoOrdered, JsonbRef, ToText, F64};
-use risingwave_common::util::iter_util::ZipEqFast;
 use risingwave_expr::expr::{build_func, Context, ExpressionBoxExt, InputRefExpression};
 use risingwave_expr::{function, ExprError, Result};
 use risingwave_pb::expr::expr_node::PbType;
@@ -216,30 +213,7 @@ fn list_cast(input: ListRef<'_>, ctx: &Context) -> Result<ListValue> {
 /// Cast struct of `source_elem_type` to `target_elem_type` by casting each element.
 #[function("cast(struct) -> struct", type_infer = "panic")]
 fn struct_cast(input: StructRef<'_>, ctx: &Context) -> Result<StructValue> {
-    let fields = (input.iter_fields_ref())
-        .zip_eq_fast(ctx.arg_types[0].as_struct().types())
-        .zip_eq_fast(ctx.return_type.as_struct().types())
-        .map(|((datum_ref, source_field_type), target_field_type)| {
-            if source_field_type == target_field_type {
-                return Ok(datum_ref.map(|scalar_ref| scalar_ref.into_scalar_impl()));
-            }
-            let cast = build_func(
-                PbType::Cast,
-                target_field_type.clone(),
-                vec![InputRefExpression::new(source_field_type.clone(), 0).boxed()],
-            )
-            .unwrap();
-            let value = match datum_ref {
-                Some(scalar_ref) => cast
-                    .eval_row(&OwnedRow::new(vec![Some(scalar_ref.into_scalar_impl())]))
-                    .now_or_never()
-                    .unwrap()?,
-                None => None,
-            };
-            Ok(value) as Result<_>
-        })
-        .try_collect()?;
-    Ok(StructValue::new(fields))
+    todo!("cast struct")
 }
 
 #[cfg(test)]
@@ -446,13 +420,6 @@ mod tests {
             let x = target[idx].as_ref().map(|x| x.as_scalar_ref());
             assert_eq!(x, item);
         }
-
-        for i in 0..input.len() {
-            let row = OwnedRow::new(vec![input[i].map(|int| int.to_scalar_value())]);
-            let result = expr.eval_row(&row).await.unwrap();
-            let expected = target[i].map(|int| int.to_scalar_value());
-            assert_eq!(result, expected);
-        }
     }
 
     #[tokio::test]
@@ -468,13 +435,6 @@ mod tests {
         for (idx, item) in arr.iter().enumerate() {
             let x = target[idx].as_ref().map(|x| x.as_scalar_ref());
             assert_eq!(x, item);
-        }
-
-        for i in 0..input.len() {
-            let row = OwnedRow::new(vec![input[i].map(|int| int.to_scalar_value())]);
-            let result = expr.eval_row(&row).await.unwrap();
-            let expected = target[i].map(|int| int.to_scalar_value());
-            assert_eq!(result, expected);
         }
     }
 
@@ -506,16 +466,6 @@ mod tests {
         for (idx, item) in arr.iter().enumerate() {
             let x = target[idx].as_ref().map(|x| x.as_scalar_ref());
             assert_eq!(x, item);
-        }
-
-        for i in 0..input.len() {
-            let row = OwnedRow::new(vec![input[i]
-                .as_ref()
-                .cloned()
-                .map(|str| str.to_scalar_value())]);
-            let result = expr.eval_row(&row).await.unwrap();
-            let expected = target[i].as_ref().cloned().map(|x| x.to_scalar_value());
-            assert_eq!(result, expected);
         }
     }
 
@@ -550,13 +500,6 @@ mod tests {
             let x = target[idx].as_ref().map(|x| x.as_scalar_ref());
             assert_eq!(x, item);
         }
-
-        for i in 0..input.len() {
-            let row = OwnedRow::new(vec![input[i].map(|b| b.to_scalar_value())]);
-            let result = expr.eval_row(&row).await.unwrap();
-            let expected = target[i].as_ref().cloned().map(|x| x.to_scalar_value());
-            assert_eq!(result, expected);
-        }
     }
 
     async fn test_unary_date<A, F>(f: F, kind: PbType)
@@ -587,13 +530,6 @@ mod tests {
         for (idx, item) in arr.iter().enumerate() {
             let x = target[idx].as_ref().map(|x| x.as_scalar_ref());
             assert_eq!(x, item);
-        }
-
-        for i in 0..input.len() {
-            let row = OwnedRow::new(vec![input[i].map(|d| d.to_scalar_value())]);
-            let result = expr.eval_row(&row).await.unwrap();
-            let expected = target[i].as_ref().cloned().map(|x| x.to_scalar_value());
-            assert_eq!(result, expected);
         }
     }
 }

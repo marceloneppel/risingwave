@@ -12,11 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::Index;
-
 use risingwave_common::array::{ArrayRef, DataChunk};
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum};
+use risingwave_common::types::DataType;
 use risingwave_pb::expr::ExprNode;
 
 use super::{BoxedExpression, Build};
@@ -38,11 +35,6 @@ impl Expression for InputRefExpression {
 
     async fn eval(&self, input: &DataChunk) -> Result<ArrayRef> {
         Ok(input.column_at(self.idx).clone())
-    }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        let cell = input.index(self.idx).as_ref().cloned();
-        Ok(cell)
     }
 
     fn input_ref_index(&self) -> Option<usize> {
@@ -83,25 +75,5 @@ impl Build for InputRefExpression {
         _build_child: impl Fn(&ExprNode) -> Result<BoxedExpression>,
     ) -> Result<Self> {
         Ok(Self::from_prost(prost))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use risingwave_common::row::OwnedRow;
-    use risingwave_common::types::{DataType, Datum};
-
-    use crate::expr::{Expression, InputRefExpression};
-
-    #[tokio::test]
-    async fn test_eval_row_input_ref() {
-        let datums: Vec<Datum> = vec![Some(1.into()), Some(2.into()), None];
-        let input_row = OwnedRow::new(datums.clone());
-
-        for (i, expected) in datums.iter().enumerate() {
-            let expr = InputRefExpression::new(DataType::Int32, i);
-            let result = expr.eval_row(&input_row).await.unwrap();
-            assert_eq!(*expected, result);
-        }
     }
 }

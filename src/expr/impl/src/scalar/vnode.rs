@@ -16,8 +16,7 @@ use std::sync::Arc;
 
 use risingwave_common::array::{ArrayBuilder, ArrayImpl, ArrayRef, DataChunk, I16ArrayBuilder};
 use risingwave_common::hash::VirtualNode;
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum};
+use risingwave_common::types::DataType;
 use risingwave_expr::expr::{BoxedExpression, Expression};
 use risingwave_expr::{build_function, Result};
 
@@ -50,14 +49,6 @@ impl Expression for VnodeExpression {
             .for_each(|vnode| builder.append(Some(vnode.to_scalar())));
         Ok(Arc::new(ArrayImpl::from(builder.finish())))
     }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        Ok(Some(
-            VirtualNode::compute_row(input, &self.dist_key_indices)
-                .to_scalar()
-                .into(),
-        ))
-    }
 }
 
 #[cfg(test)]
@@ -81,13 +72,6 @@ mod tests {
         let output = expr.eval(&input).await.unwrap();
         for vnode in output.iter() {
             let vnode = vnode.unwrap().into_int16();
-            assert!((0..VirtualNode::COUNT as i16).contains(&vnode));
-        }
-
-        // test eval_row
-        for row in input.rows() {
-            let result = expr.eval_row(&row.to_owned_row()).await.unwrap();
-            let vnode = result.unwrap().into_int16();
             assert!((0..VirtualNode::COUNT as i16).contains(&vnode));
         }
     }

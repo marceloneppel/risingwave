@@ -14,7 +14,6 @@
 
 use async_trait::async_trait;
 use risingwave_common::array::{ArrayRef, DataChunk};
-use risingwave_common::row::OwnedRow;
 use risingwave_common::types::{DataType, Datum};
 
 use crate::error::Result;
@@ -41,10 +40,6 @@ impl<E: Expression> Expression for Checked<E> {
         let res = self.0.eval_v2(input).await?;
         assert_eq!(res.len(), input.capacity());
         Ok(res)
-    }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        self.0.eval_row(input).await
     }
 
     fn eval_const(&self) -> Result<Datum> {

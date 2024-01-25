@@ -17,8 +17,7 @@ use std::sync::Arc;
 
 use risingwave_common::array::{ArrayRef, DataChunk};
 use risingwave_common::bail;
-use risingwave_common::row::{OwnedRow, Row};
-use risingwave_common::types::{DataType, Datum, ScalarImpl};
+use risingwave_common::types::DataType;
 use risingwave_expr::expr::{BoxedExpression, Expression};
 use risingwave_expr::{build_function, Result};
 
@@ -91,19 +90,6 @@ impl Expression for CaseExpression {
             }
         }
         Ok(Arc::new(builder.finish()))
-    }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        for WhenClause { when, then } in &self.when_clauses {
-            if when.eval_row(input).await?.map_or(false, |w| w.into_bool()) {
-                return then.eval_row(input).await;
-            }
-        }
-        if let Some(ref else_expr) = self.else_clause {
-            else_expr.eval_row(input).await
-        } else {
-            Ok(None)
-        }
     }
 }
 
@@ -310,12 +296,6 @@ mod tests {
         // test eval
         let output = case.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = case.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 
     #[tokio::test]
@@ -334,11 +314,5 @@ mod tests {
         // test eval
         let output = case.eval(&input).await.unwrap();
         assert_eq!(&output, expected.column_at(0));
-
-        // test eval_row
-        for (row, expected) in input.rows().zip_eq_debug(expected.rows()) {
-            let result = case.eval_row(&row.to_owned_row()).await.unwrap();
-            assert_eq!(result, expected.datum_at(0).to_owned_datum());
-        }
     }
 }

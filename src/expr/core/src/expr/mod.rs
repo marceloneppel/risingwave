@@ -45,7 +45,6 @@ mod value;
 
 use futures_util::TryFutureExt;
 use risingwave_common::array::{ArrayRef, DataChunk};
-use risingwave_common::row::OwnedRow;
 use risingwave_common::types::{DataType, Datum};
 
 pub use self::build::*;
@@ -90,9 +89,6 @@ pub trait Expression: std::fmt::Debug + Sync + Send {
         self.eval(input).map_ok(ValueImpl::Array).await
     }
 
-    /// Evaluate the expression in row-based execution. Returns a nullable scalar.
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum>;
-
     /// Evaluate if the expression is constant.
     fn eval_const(&self) -> Result<Datum> {
         Err(ExprError::NotConstant)
@@ -121,8 +117,7 @@ impl<E: Expression + 'static> E {
 }
 
 /// An type-safe wrapper that indicates the inner expression can be evaluated in a non-strict
-/// manner, i.e., developers can directly call `eval_infallible` and `eval_row_infallible` without
-/// checking the result.
+/// manner, i.e., developers can directly call `eval_infallible` without checking the result.
 ///
 /// This is usually created by non-strict build functions like [`crate::expr::build_non_strict_from_prost`]
 /// and [`crate::expr::build_func_non_strict`]. It can also be created directly by
@@ -173,14 +168,6 @@ where
     /// Use with expressions built in non-strict mode.
     pub async fn eval_infallible(&self, input: &DataChunk) -> ArrayRef {
         self.0.eval(input).await.expect("evaluation failed")
-    }
-
-    /// Evaluate the expression in row-based execution and assert it succeeds. Returns a nullable
-    /// scalar.
-    ///
-    /// Use with expressions built in non-strict mode.
-    pub async fn eval_row_infallible(&self, input: &OwnedRow) -> Datum {
-        self.0.eval_row(input).await.expect("evaluation failed")
     }
 
     /// Unwrap the inner expression.

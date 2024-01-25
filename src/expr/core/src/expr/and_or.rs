@@ -17,8 +17,7 @@
 use std::sync::Arc;
 
 use risingwave_common::array::*;
-use risingwave_common::row::OwnedRow;
-use risingwave_common::types::{DataType, Datum, Scalar};
+use risingwave_common::types::DataType;
 use risingwave_expr_macro::build_function;
 use risingwave_pb::expr::expr_node::Type;
 
@@ -78,21 +77,6 @@ impl Expression for BinaryShortCircuitExpression {
             _ => unimplemented!(),
         };
         Ok(Arc::new(c.into()))
-    }
-
-    async fn eval_row(&self, input: &OwnedRow) -> Result<Datum> {
-        let ret_ia1 = self.expr_ia1.eval_row(input).await?.map(|x| x.into_bool());
-        match self.expr_type {
-            Type::Or if ret_ia1 == Some(true) => return Ok(Some(true.to_scalar_value())),
-            Type::And if ret_ia1 == Some(false) => return Ok(Some(false.to_scalar_value())),
-            _ => {}
-        }
-        let ret_ia2 = self.expr_ia2.eval_row(input).await?.map(|x| x.into_bool());
-        match self.expr_type {
-            Type::Or => Ok(or(ret_ia1, ret_ia2).map(|x| x.to_scalar_value())),
-            Type::And => Ok(and(ret_ia1, ret_ia2).map(|x| x.to_scalar_value())),
-            _ => unimplemented!(),
-        }
     }
 }
 

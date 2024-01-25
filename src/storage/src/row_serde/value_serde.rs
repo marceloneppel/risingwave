@@ -17,7 +17,6 @@
 use std::sync::Arc;
 
 use either::for_both;
-use futures::FutureExt;
 use itertools::Itertools;
 use risingwave_common::catalog::ColumnDesc;
 use risingwave_common::row::{OwnedRow, RowDeserializer as BasicDeserializer};
