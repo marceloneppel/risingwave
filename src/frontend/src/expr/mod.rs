@@ -16,7 +16,7 @@ use enum_as_inner::EnumAsInner;
 use fixedbitset::FixedBitSet;
 use futures::FutureExt;
 use paste::paste;
-use risingwave_common::array::{DataChunk, ListValue};
+use risingwave_common::array::{ArrayRef, DataChunk, ListValue};
 use risingwave_common::types::{DataType, Datum, JsonbVal, Scalar};
 use risingwave_expr::aggregate::AggKind;
 use risingwave_expr::expr::build_from_prost;
@@ -333,6 +333,15 @@ impl ExprImpl {
         // check and there is no difference.
         self.cast_assign(DataType::Varchar)
             .map_err(|err| err.into())
+    }
+
+    /// Evaluate the expression on the given input.
+    ///
+    /// TODO: This is a naive implementation. We should avoid proto ser/de.
+    /// Tracking issue: <https://github.com/risingwavelabs/risingwave/issues/3479>
+    pub async fn eval(&self, input: &DataChunk) -> RwResult<ArrayRef> {
+        let backend_expr = build_from_prost(&self.to_expr_proto())?;
+        Ok(backend_expr.eval(input).await?)
     }
 
     /// Try to evaluate an expression if it's a constant expression by `ExprImpl::is_const`.

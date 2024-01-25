@@ -321,8 +321,8 @@ impl ExprVisitable for StreamCdcTableScan {
 mod tests {
     use std::str::FromStr;
 
-    use risingwave_common::row::OwnedRow;
-    use risingwave_common::types::{JsonbVal, ScalarImpl};
+    use risingwave_common::array::{Array, BoolArray, DataChunk, JsonbArray, Utf8Array};
+    use risingwave_common::types::JsonbVal;
 
     use super::*;
 
@@ -331,29 +331,18 @@ mod tests {
         let t1_json = JsonbVal::from_str(r#"{ "before": null, "after": { "v": 111, "v2": 222.2 }, "source": { "version": "2.2.0.Alpha3", "connector": "mysql", "name": "dbserver1", "ts_ms": 1678428689000, "snapshot": "false", "db": "inventory", "sequence": null, "table": "t1", "server_id": 223344, "gtid": null, "file": "mysql-bin.000003", "pos": 774, "row": 0, "thread": 8, "query": null }, "op": "c", "ts_ms": 1678428689389, "transaction": null }"#).unwrap();
         let t2_json = JsonbVal::from_str(r#"{ "before": null, "after": { "v": 333, "v2": 666.6 }, "source": { "version": "2.2.0.Alpha3", "connector": "mysql", "name": "dbserver1", "ts_ms": 1678428689000, "snapshot": "false", "db": "inventory", "sequence": null, "table": "t2", "server_id": 223344, "gtid": null, "file": "mysql-bin.000003", "pos": 884, "row": 0, "thread": 8, "query": null }, "op": "c", "ts_ms": 1678428689389, "transaction": null }"#).unwrap();
         let trx_json = JsonbVal::from_str(r#"{"data_collections": null, "event_count": null, "id": "35319:3962662584", "status": "BEGIN", "ts_ms": 1704263537068}"#).unwrap();
-        let row1 = OwnedRow::new(vec![
-            Some(t1_json.into()),
-            Some(r#"{"file": "1.binlog", "pos": 100}"#.into()),
-        ]);
-        let row2 = OwnedRow::new(vec![
-            Some(t2_json.into()),
-            Some(r#"{"file": "2.binlog", "pos": 100}"#.into()),
-        ]);
-
-        let row3 = OwnedRow::new(vec![
-            Some(trx_json.into()),
-            Some(r#"{"file": "3.binlog", "pos": 100}"#.into()),
-        ]);
+        let array1 = JsonbArray::from_iter([t1_json, t2_json, trx_json]).into_ref();
+        let array2 = Utf8Array::from_iter([
+            r#"{"file": "1.binlog", "pos": 100}"#,
+            r#"{"file": "2.binlog", "pos": 100}"#,
+            r#"{"file": "3.binlog", "pos": 100}"#,
+        ])
+        .into_ref();
+        let input = DataChunk::new(vec![array1, array2], 3);
 
         let filter_expr = StreamCdcTableScan::build_cdc_filter_expr("t1");
-        assert_eq!(
-            filter_expr.eval_row(&row1).await.unwrap(),
-            Some(ScalarImpl::Bool(true))
-        );
-        assert_eq!(
-            filter_expr.eval_row(&row2).await.unwrap(),
-            Some(ScalarImpl::Bool(false))
-        );
-        assert_eq!(filter_expr.eval_row(&row3).await.unwrap(), None)
+        let output = filter_expr.eval(&input).await.unwrap();
+        let expected = BoolArray::from_iter([Some(true), Some(false), None]).into_ref();
+        assert_eq!(output, expected);
     }
 }
