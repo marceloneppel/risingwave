@@ -17,9 +17,11 @@
 use std::sync::Arc;
 
 use either::for_both;
+use futures::FutureExt;
 use itertools::Itertools;
+use risingwave_common::array::DataChunk;
 use risingwave_common::catalog::ColumnDesc;
-use risingwave_common::row::{OwnedRow, RowDeserializer as BasicDeserializer};
+use risingwave_common::row::RowDeserializer as BasicDeserializer;
 use risingwave_common::types::*;
 use risingwave_common::util::value_encoding::column_aware_row_encoding::{
     ColumnAwareSerde, Deserializer, Serializer,
@@ -113,10 +115,11 @@ impl ValueRowSerdeNew for ColumnAwareSerde {
                     // It's okay since we previously banned impure expressions in default columns.
                     build_from_prost(&expr.expect("expr should not be none"))
                         .expect("build_from_prost error")
-                        .eval_row(&OwnedRow::empty())
+                        .eval(&DataChunk::new_dummy(1))
                         .now_or_never()
                         .expect("constant expression should not be async")
-                        .expect("eval_row failed")
+                        .expect("failed to eval")
+                        .datum_at(0)
                 };
                 Some((i, value))
             } else {
