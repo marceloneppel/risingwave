@@ -199,7 +199,7 @@ impl<'a, R: Rng> SqlGenerator<'a, R> {
         // We can use const folding, then remove the right expression,
         // if it evaluates to `false` after const folding.
         // Have to first bind `Expr`, since it is AST form.
-        // Then if successfully bound, use `eval_row_const` to constant fold it.
+        // Then if successfully bound, use `eval_const` to constant fold it.
         // Take a look at <https://github.com/risingwavelabs/risingwave/pull/7541/files#diff-08400d774a613753da25dcb45e905e8fe3d20acaccca846f39a86834f4c01656>.
         if expr != Expr::Value(Value::Boolean(false)) {
             Some(expr)

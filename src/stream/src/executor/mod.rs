@@ -21,7 +21,7 @@ use enum_as_inner::EnumAsInner;
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
 use itertools::Itertools;
-use risingwave_common::array::StreamChunk;
+use risingwave_common::array::{Array, DataChunk, I32Array, StreamChunk};
 use risingwave_common::buffer::Bitmap;
 use risingwave_common::catalog::Schema;
 use risingwave_common::row::OwnedRow;
@@ -749,12 +749,17 @@ impl Watermark {
         new_col_idx: usize,
     ) -> Option<Self> {
         let Self { col_idx, val, .. } = self;
-        let row = {
-            let mut row = vec![None; col_idx + 1];
-            row[col_idx] = Some(val);
-            OwnedRow::new(row)
+        let chunk = {
+            // construct a chunk with a single row, where the value of the watermark column is `val`
+            let null_array = I32Array::from_iter([None]).into_ref();
+            let mut builder = self.data_type.create_array_builder(1);
+            builder.append(Some(val));
+            let mut columns = Vec::with_capacity(col_idx + 1);
+            columns.resize_with(col_idx, || null_array.clone());
+            columns.push(builder.finish().into_ref());
+            DataChunk::new(columns, 1)
         };
-        let val = expr.eval_row_infallible(&row).await?;
+        let val = expr.eval_infallible(&chunk).await.datum_at(0)?;
         Some(Self::new(new_col_idx, expr.inner().return_type(), val))
     }
 

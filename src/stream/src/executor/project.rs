@@ -201,7 +201,7 @@ mod tests {
     use risingwave_common::array::stream_chunk::StreamChunkTestExt;
     use risingwave_common::array::{DataChunk, StreamChunk};
     use risingwave_common::catalog::{Field, Schema};
-    use risingwave_common::types::{DataType, Datum};
+    use risingwave_common::types::DataType;
     use risingwave_expr::expr::{self, Expression, ValueImpl};
 
     use super::super::test_utils::MockSource;
@@ -294,11 +294,6 @@ mod tests {
                 value: Some(value.into()),
                 capacity: input.capacity(),
             })
-        }
-
-        async fn eval_row(&self, _input: &OwnedRow) -> expr::Result<Datum> {
-            let value = DUMMY_COUNTER.fetch_add(1, atomic::Ordering::SeqCst);
-            Ok(Some(value.into()))
         }
     }
 
