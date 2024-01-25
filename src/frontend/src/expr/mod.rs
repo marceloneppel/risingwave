@@ -16,7 +16,7 @@ use enum_as_inner::EnumAsInner;
 use fixedbitset::FixedBitSet;
 use futures::FutureExt;
 use paste::paste;
-use risingwave_common::array::ListValue;
+use risingwave_common::array::{DataChunk, ListValue};
 use risingwave_common::types::{DataType, Datum, JsonbVal, Scalar};
 use risingwave_expr::aggregate::AggKind;
 use risingwave_expr::expr::build_from_prost;
@@ -335,15 +335,6 @@ impl ExprImpl {
             .map_err(|err| err.into())
     }
 
-    /// Evaluate the expression on the given input.
-    ///
-    /// TODO: This is a naive implementation. We should avoid proto ser/de.
-    /// Tracking issue: <https://github.com/risingwavelabs/risingwave/issues/3479>
-    pub async fn eval_row(&self, input: &OwnedRow) -> RwResult<Datum> {
-        let backend_expr = build_from_prost(&self.to_expr_proto())?;
-        Ok(backend_expr.eval_row(input).await?)
-    }
-
     /// Try to evaluate an expression if it's a constant expression by `ExprImpl::is_const`.
     ///
     /// Returns...
@@ -351,14 +342,20 @@ impl ExprImpl {
     /// - `Some(Ok(_))` if constant evaluation succeeds,
     /// - `Some(Err(_))` if there's an error while evaluating a constant expression.
     pub fn try_fold_const(&self) -> Option<RwResult<Datum>> {
-        if self.is_const() {
-            self.eval_row(&OwnedRow::empty())
-                .now_or_never()
-                .expect("constant expression should not be async")
-                .into()
-        } else {
-            None
+        self.try_fold_const_internal().transpose()
+    }
+
+    fn try_fold_const_internal(&self) -> RwResult<Option<Datum>> {
+        if !self.is_const() {
+            return Ok(None);
         }
+        let expr = build_from_prost(&self.to_expr_proto())?;
+        let datum = expr
+            .eval(&DataChunk::new_dummy(1))
+            .now_or_never()
+            .expect("constant expression should not be async")?
+            .datum_at(0);
+        Ok(Some(datum))
     }
 
     /// Similar to `ExprImpl::try_fold_const`, but panics if the expression is not constant.
@@ -1134,7 +1131,6 @@ macro_rules! assert_eq_input_ref {
 pub(crate) use assert_eq_input_ref;
 use risingwave_common::bail;
 use risingwave_common::catalog::Schema;
-use risingwave_common::row::OwnedRow;
 
 use self::function_call::CastError;
 use crate::binder::BoundSetExpr;
