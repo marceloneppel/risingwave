@@ -1227,6 +1227,7 @@ impl HummockManager {
             anyhow::anyhow!("failpoint metastore error")
         )));
 
+        let mut remain_count = 60;
         while let Some(task) = self
             .get_compact_task_impl(compaction_group_id, selector)
             .await?
@@ -1238,6 +1239,10 @@ impl HummockManager {
                 CompactStatus::is_trivial_move_task(&task)
                     || CompactStatus::is_trivial_reclaim(&task)
             );
+            remain_count -= 1;
+            if remain_count == 0 {
+                break;
+            }
         }
 
         Ok(None)
