@@ -1999,7 +1999,11 @@ impl ScaleController {
                         );
                     }
                     FragmentDistributionType::Hash => match parallelism {
-                        TableParallelism::Adaptive => {
+                        TableParallelism::Adaptive { percentile } => {
+                            if let Some(_x) = percentile {
+                                todo!()
+                            }
+
                             target_plan.insert(
                                 fragment_id,
                                 Self::diff_parallel_unit_change(
@@ -2783,7 +2787,9 @@ impl GlobalStreamManager {
                         .into_iter()
                         .map(|(table_id, parallelism)| {
                             let table_parallelism = match parallelism {
-                                StreamingParallelism::Adaptive => TableParallelism::Adaptive,
+                                StreamingParallelism::Adaptive { percentile } => {
+                                    TableParallelism::Adaptive { percentile }
+                                }
                                 StreamingParallelism::Fixed(n) => TableParallelism::Fixed(n),
                                 StreamingParallelism::Custom => TableParallelism::Custom,
                             };
