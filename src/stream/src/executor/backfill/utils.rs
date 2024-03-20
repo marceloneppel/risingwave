@@ -666,7 +666,7 @@ pub(crate) enum RowAndVnodeStreamItem {
 }
 
 #[try_stream(ok = RowAndVnodeStreamItem, error = StreamExecutorError)]
-pub(crate) async fn owned_row_iter_with_vnode<S, E>(storage_iter: S, vnode: VirtualNode)
+pub(crate) async fn owned_row_iter_with_vnode<S, E>(vnode: VirtualNode, storage_iter: S)
 where
     StreamExecutorError: From<E>,
     S: Stream<Item = Result<KeyedRow<Bytes>, E>>,
