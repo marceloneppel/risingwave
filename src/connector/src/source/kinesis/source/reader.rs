@@ -123,6 +123,7 @@ impl SplitReader for KinesisSplitReader {
 impl CommonSplitReader for KinesisSplitReader {
     #[try_stream(ok = Vec < SourceMessage >, error = anyhow::Error)]
     async fn into_data_stream(mut self) {
+        let loop_ms=env::var("RW_KINESIS_SPLIT_READER_LOOP_MS").unwrap_or("200").parse();
         self.new_shard_iter().await?;
         loop {
             if self.shard_iter.is_none() {
@@ -141,7 +142,7 @@ impl CommonSplitReader for KinesisSplitReader {
                         .map(|r| from_kinesis_record(r, self.split_id.clone()))
                         .collect::<Vec<SourceMessage>>();
                     if chunk.is_empty() {
-                        tokio::time::sleep(Duration::from_millis(200)).await;
+                        tokio::time::sleep(Duration::from_millis(loop_ms)).await;
                         continue;
                     }
                     self.latest_offset = Some(chunk.last().unwrap().offset.clone());
@@ -163,7 +164,7 @@ impl CommonSplitReader for KinesisSplitReader {
                         self.shard_id
                     );
                     self.new_shard_iter().await?;
-                    tokio::time::sleep(Duration::from_millis(200)).await;
+                    tokio::time::sleep(Duration::from_millis(loop_ms)).await;
                     continue;
                 }
                 Err(SdkError::ServiceError(e))
@@ -175,7 +176,7 @@ impl CommonSplitReader for KinesisSplitReader {
                         self.shard_id
                     );
                     self.new_shard_iter().await?;
-                    tokio::time::sleep(Duration::from_millis(200)).await;
+                    tokio::time::sleep(Duration::from_millis(loop_ms)).await;
                     continue;
                 }
                 Err(SdkError::DispatchFailure(e)) => {
@@ -195,7 +196,7 @@ impl CommonSplitReader for KinesisSplitReader {
                         self.shard_id
                     );
                     self.new_shard_iter().await?;
-                    tokio::time::sleep(Duration::from_millis(200)).await;
+                    tokio::time::sleep(Duration::from_millis(loop_ms)).await;
                     continue;
                 }
                 Err(e) => {
