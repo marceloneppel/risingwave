@@ -61,7 +61,7 @@ impl ExecutorBuilder for FsFetchExecutorBuilder {
         );
         let source_ctrl_opts = SourceCtrlOpts {
             chunk_size: params.env.config().developer.chunk_size,
-            rate_limit: source.rate_limit.map(|x| x as _),
+            rate_limit: None,
         };
 
         let source_column_ids: Vec<_> = source_desc_builder
@@ -125,7 +125,7 @@ impl ExecutorBuilder for FsFetchExecutorBuilder {
             }
             _ => unreachable!(),
         };
-        let rate_limit = source.rate_limit.map(|x| x as _);
+        let rate_limit = None;
         Ok(FlowControlExecutor::new(executor, params.actor_context, rate_limit).boxed())
     }
 }

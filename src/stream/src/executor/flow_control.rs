@@ -58,12 +58,6 @@ impl FlowControlExecutor {
 
     #[try_stream(ok = Message, error = StreamExecutorError)]
     async fn execute_inner(mut self) {
-        let get_rate_limiter = |rate_limit: u32| {
-            let quota = Quota::per_second(NonZeroU32::new(rate_limit).unwrap());
-            let clock = MonotonicClock;
-            RateLimiter::direct_with_clock(quota, &clock)
-        };
-        let mut rate_limiter = self.rate_limit.map(get_rate_limiter);
         if self.rate_limit.is_some() {
             tracing::info!(id = self.actor_ctx.id, rate_limit = ?self.rate_limit, "actor starts with rate limit",);
         }
@@ -78,31 +72,13 @@ impl FlowControlExecutor {
                         // Handle case where chunk is empty
                         continue;
                     };
-                    if let Some(rate_limiter) = &rate_limiter {
-                        let limit = NonZeroU32::new(self.rate_limit.unwrap()).unwrap();
-                        if n <= limit {
-                            // `InsufficientCapacity` should never happen because we have done the check
-                            rate_limiter.until_n_ready(n).await.unwrap();
-                            yield Message::Chunk(chunk);
-                        } else {
-                            // Cut the chunk into smaller chunks
-                            for chunk in chunk.split(limit.get() as usize) {
-                                let n = NonZeroU32::new(chunk.cardinality() as u32).unwrap();
-                                // Ditto.
-                                rate_limiter.until_n_ready(n).await.unwrap();
-                                yield Message::Chunk(chunk);
-                            }
-                        }
-                    } else {
-                        yield Message::Chunk(chunk);
-                    }
+                    yield Message::Chunk(chunk);
                 }
                 Message::Barrier(barrier) => {
                     if let Some(mutation) = barrier.mutation.as_ref() {
                         if let Mutation::Throttle(actor_to_apply) = mutation.as_ref() {
                             if let Some(limit) = actor_to_apply.get(&self.actor_ctx.id) {
                                 self.rate_limit = *limit;
-                                rate_limiter = self.rate_limit.map(get_rate_limiter);
                                 tracing::info!(
                                     id = self.actor_ctx.id,
                                     new_rate_limit = ?self.rate_limit,
