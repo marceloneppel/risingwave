@@ -26,17 +26,13 @@ use std::collections::HashMap;
 
 use mv2::FragmentId;
 use risingwave_meta_model_v2 as mv2;
-
 use risingwave_meta_model_v2::WorkerId;
-use sea_orm::TransactionTrait;
-
 
 use crate::manager::MetadataManager;
-
 use crate::MetaResult;
 
 impl ScaleControllerV2 {
-    pub async fn reschedule(&self, reschedule: RescheduleV2) -> MetaResult<()> {
+    pub async fn reschedule(&self, _reschedule: RescheduleV2) -> MetaResult<()> {
         // let metadata_manager = self.metadata_manager.as_v2_ref();
         //
         // let inner = metadata_manager.catalog_controller.inner.write().await;

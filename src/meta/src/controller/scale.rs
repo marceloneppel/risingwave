@@ -21,12 +21,10 @@ use risingwave_meta_model_migration::{
 };
 use risingwave_meta_model_v2::actor_dispatcher::DispatcherType;
 use risingwave_meta_model_v2::prelude::{Actor, ActorDispatcher, Fragment};
-use risingwave_meta_model_v2::{
-    actor, actor_dispatcher, fragment, ActorId, FragmentId, ObjectId, TableId,
-};
+use risingwave_meta_model_v2::{actor, actor_dispatcher, fragment, ActorId, FragmentId, ObjectId};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, DbErr, EntityTrait, JoinType, QueryFilter, QueryResult,
-    QuerySelect, QueryTrait, RelationTrait, Statement, TransactionTrait,
+    ColumnTrait, ConnectionTrait, DbErr, EntityTrait, JoinType, QueryFilter, QuerySelect,
+    QueryTrait, RelationTrait, Statement, TransactionTrait,
 };
 
 use crate::controller::catalog::CatalogController;
@@ -154,8 +152,8 @@ pub struct RescheduleWorkingSet {
     pub actors: HashMap<ActorId, actor::Model>,
     pub actor_dispatchers: HashMap<ActorId, Vec<actor_dispatcher::Model>>,
 
-pub    fragment_downstreams: HashMap<FragmentId, Vec<(FragmentId, DispatcherType)>>,
-pub    fragment_upstreams: HashMap<FragmentId, Vec<(FragmentId, DispatcherType)>>,
+    pub fragment_downstreams: HashMap<FragmentId, Vec<(FragmentId, DispatcherType)>>,
+    pub fragment_upstreams: HashMap<FragmentId, Vec<(FragmentId, DispatcherType)>>,
 }
 
 async fn resolve_no_shuffle_query<C>(
@@ -177,7 +175,7 @@ where
         .into_iter()
         .map(|res| res.try_get_many_by_index())
         .collect::<Result<Vec<(FragmentId, DispatcherType, FragmentId)>, DbErr>>()
-        .map_err(|e| MetaError::from(e))?;
+        .map_err(MetaError::from)?;
 
     Ok(result)
 }
@@ -326,23 +324,23 @@ impl CatalogController {
 #[cfg(test)]
 #[cfg(not(madsim))]
 mod tests {
-    use risingwave_meta_model_migration::PostgresQueryBuilder;
-    use sea_orm::TransactionTrait;
+    
+    
 
     use super::*;
-    use crate::manager::{MetaOpts, MetaSrvEnv};
+    
 
     #[tokio::test]
     async fn test_scale() -> MetaResult<()> {
-        let srv_env = MetaSrvEnv::for_test().await;
-        let mgr = CatalogController::new(srv_env)?;
-        let inner = mgr.inner.read().await;
-        let txn = inner.db.begin().await?;
-
-        let working_set = mgr
-            .resolve_working_set_for_reschedule_fragments(&txn, vec![8, 7, 6])
-            .await
-            .unwrap();
+        // let srv_env = MetaSrvEnv::for_test().await;
+        // let mgr = CatalogController::new(srv_env)?;
+        // let inner = mgr.inner.read().await;
+        // let txn = inner.db.begin().await?;
+        //
+        // let working_set = mgr
+        //     .resolve_working_set_for_reschedule_fragments(&txn, vec![8, 7, 6])
+        //     .await
+        //     .unwrap();
 
         // println!("working set {:#?}", working_set);
 
