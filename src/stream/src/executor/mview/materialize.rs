@@ -40,6 +40,7 @@ use risingwave_storage::StateStore;
 use crate::cache::{new_unbounded, ManagedLruCache};
 use crate::common::metrics::MetricsInfo;
 use crate::common::table::state_table::StateTableInner;
+use crate::consistency::enable_strict_consistency;
 use crate::executor::error::StreamExecutorError;
 use crate::executor::monitor::StreamingMetrics;
 use crate::executor::{
@@ -233,7 +234,8 @@ impl<S: StateStore, SD: ValueRowSerde> MaterializeExecutor<S, SD> {
                 Message::Barrier(b) => {
                     let mutation = b.mutation.clone();
                     // If a downstream mv depends on the current table, we need to do conflict check again.
-                    if !self.state_table.is_consistent_op()
+                    if enable_strict_consistency()
+                        && !self.state_table.is_consistent_op()
                         && Self::new_downstream_created(mutation, self.actor_context.id)
                     {
                         assert_eq!(self.conflict_behavior, ConflictBehavior::Overwrite);

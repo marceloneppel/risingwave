@@ -67,6 +67,7 @@ use super::watermark::{WatermarkBufferByEpoch, WatermarkBufferStrategy};
 use crate::cache::cache_may_stale;
 use crate::common::cache::{StateCache, StateCacheFiller};
 use crate::common::table::state_table_cache::StateTableWatermarkCache;
+use crate::consistency::enable_strict_consistency;
 use crate::executor::{StreamExecutorError, StreamExecutorResult};
 
 /// This num is arbitrary and we may want to improve this choice in the future.
@@ -366,17 +367,11 @@ where
             )
         };
 
-        let is_consistent_op = if crate::consistency::insane() {
-            // In insane mode, we will have inconsistent operations applied on the table, even if
-            // our executor code do not expect that.
-            false
-        } else {
-            is_consistent_op
-        };
-        let op_consistency_level = if is_consistent_op {
+        let op_consistency_level = if is_consistent_op && enable_strict_consistency() {
             let row_serde = make_row_serde();
             consistent_old_value_op(row_serde)
         } else {
+            // disable sanity check in non-strict mode
             OpConsistencyLevel::Inconsistent
         };
 
@@ -597,10 +592,11 @@ where
                 Arc::from(table_columns.clone().into_boxed_slice()),
             )
         };
-        let op_consistency_level = if is_consistent_op {
+        let op_consistency_level = if is_consistent_op && enable_strict_consistency() {
             let row_serde = make_row_serde();
             consistent_old_value_op(row_serde)
         } else {
+            // disable sanity check in non-strict mode
             OpConsistencyLevel::Inconsistent
         };
         let local_state_store = store
@@ -1093,9 +1089,10 @@ where
         let switch_op_consistency_level = switch_consistent_op.map(|enable_consistent_op| {
             assert_ne!(self.is_consistent_op, enable_consistent_op);
             self.is_consistent_op = enable_consistent_op;
-            if enable_consistent_op {
+            if enable_consistent_op && enable_strict_consistency() {
                 consistent_old_value_op(self.row_serde.clone())
             } else {
+                // disable sanity check in non-strict mode
                 OpConsistencyLevel::Inconsistent
             }
         });
