@@ -349,13 +349,13 @@ impl DispatchExecutor {
         metrics: Arc<StreamingMetrics>,
         chunk_size: usize,
     ) -> Self {
-        if crate::consistency::insane() {
-            // make some trouble before dispatching to avoid generating invalid dist key.
-            let mut info = input.info().clone();
-            info.identity = format!("{} (embedded trouble)", info.identity);
-            let troublemaker = TroublemakerExecutor::new(input, chunk_size);
-            input = (info, troublemaker).into();
-        }
+        // if crate::consistency::insane() {
+        //     // make some trouble before dispatching to avoid generating invalid dist key.
+        //     let mut info = input.info().clone();
+        //     info.identity = format!("{} (embedded trouble)", info.identity);
+        //     let troublemaker = TroublemakerExecutor::new(input, chunk_size);
+        //     input = (info, troublemaker).into();
+        // }
 
         let actor_id_str = actor_id.to_string();
         let fragment_id_str = fragment_id.to_string();
