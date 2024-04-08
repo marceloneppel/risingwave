@@ -49,7 +49,10 @@ struct Vars {
 impl TroublemakerExecutor {
     pub fn new(input: Executor, chunk_size: usize) -> Self {
         assert!(insane(), "we should only make trouble in insane mode");
-        tracing::info!("we got a troublemaker");
+        tracing::info!(
+            "we got a troublemaker following executor {:?}",
+            input.info()
+        );
         Self {
             input,
             inner: Inner { chunk_size },

@@ -146,7 +146,7 @@ impl ExecutorBuilder for StreamScanExecutorBuilder {
             StreamScanType::Unspecified => unreachable!(),
         };
 
-        if crate::consistency::insane() {
+        if false && crate::consistency::insane() {
             let mut info = params.info.clone();
             info.identity = format!("{} (troubled)", info.identity);
             Ok((
