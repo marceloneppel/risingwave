@@ -349,7 +349,7 @@ impl DispatchExecutor {
         metrics: Arc<StreamingMetrics>,
         chunk_size: usize,
     ) -> Self {
-        if false && crate::consistency::insane() {
+        if crate::consistency::insane() {
             // make some trouble before dispatching to avoid generating invalid dist key.
             let mut info = input.info().clone();
             info.identity = format!("{} (embedded trouble)", info.identity);

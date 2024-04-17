@@ -157,6 +157,8 @@ impl<S: StateStore> StorageTableInner<S, EitherSerde> {
         let versioned = table_desc.versioned;
         let distribution = TableDistribution::new_from_storage_table_desc(vnodes, table_desc);
 
+        println!("[rc] storage table distribution {:?}", distribution);
+
         Self::new_inner(
             store,
             table_id,
