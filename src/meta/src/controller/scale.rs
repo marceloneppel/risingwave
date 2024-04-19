@@ -324,11 +324,8 @@ impl CatalogController {
 #[cfg(test)]
 #[cfg(not(madsim))]
 mod tests {
-    
-    
 
     use super::*;
-    
 
     #[tokio::test]
     async fn test_scale() -> MetaResult<()> {

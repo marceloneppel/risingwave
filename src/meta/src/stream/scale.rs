@@ -647,7 +647,7 @@ impl ScaleController {
                             .flatten()
                             .map(|id| *id as _)
                             .collect(),
-                        vnode_bitmap: vnode_bitmap.map(|bitmap| bitmap.into_inner()),
+                        vnode_bitmap: vnode_bitmap.map(|bitmap| bitmap.to_protobuf()),
                     };
 
                     actor_map.insert(actor_id as _, actor_info.clone());
@@ -701,7 +701,7 @@ impl ScaleController {
                         fragment_id: fragment_id as _,
                         fragment_type_mask: fragment_type_mask as _,
                         distribution_type: distribution_type.into(),
-                        vnode_mapping: Some(vnode_mapping.into_inner()),
+                        vnode_mapping: Some(vnode_mapping.to_protobuf()),
                         state_table_ids: state_table_ids.into_u32_array(),
                         upstream_fragment_ids: upstream_fragment_id.into_u32_array(),
                         actor_template: PbStreamActor {
@@ -715,7 +715,7 @@ impl ScaleController {
                             expr_context: expr_contexts
                                 .get(&actor_id)
                                 .cloned()
-                                .map(|expr_context| expr_context.into_inner()),
+                                .map(|expr_context| expr_context.to_protobuf()),
                         },
                         actors,
                     };
