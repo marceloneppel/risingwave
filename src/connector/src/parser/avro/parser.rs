@@ -21,7 +21,7 @@ use apache_avro::{from_avro_datum, Reader, Schema};
 use risingwave_common::{bail, try_match_expand};
 use risingwave_pb::plan_common::ColumnDesc;
 
-use super::schema_resolver::ConfluentSchemaResolver;
+use super::confluent_resolver::ConfluentSchemaResolver;
 use super::util::avro_schema_to_column_descs;
 use crate::error::ConnectorResult;
 use crate::parser::unified::avro::{AvroAccess, AvroParseOptions};

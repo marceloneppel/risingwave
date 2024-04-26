@@ -22,7 +22,7 @@ use risingwave_pb::catalog::PbSchemaRegistryNameStrategy;
 use risingwave_pb::plan_common::ColumnDesc;
 
 use crate::error::ConnectorResult;
-use crate::parser::avro::schema_resolver::ConfluentSchemaResolver;
+use crate::parser::avro::confluent_resolver::ConfluentSchemaResolver;
 use crate::parser::avro::util::avro_schema_to_column_descs;
 use crate::parser::unified::avro::{
     avro_extract_field_schema, avro_schema_skip_union, AvroAccess, AvroParseOptions,

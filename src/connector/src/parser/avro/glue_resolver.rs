@@ -12,9 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod confluent_resolver;
-pub mod glue_resolver;
-mod parser;
-pub mod util;
+use std::sync::Arc;
 
-pub use parser::*;
+// use anyhow::Context;
+use apache_avro::Schema;
+use moka::future::Cache;
+
+// use crate::error::ConnectorResult;
+
+#[derive(Debug)]
+pub struct ConfluentSchemaResolver {
+    writer_schemas: Cache<i32, Arc<Schema>>,
+    // confluent_client: Client,
+}
+
+impl ConfluentSchemaResolver {}
