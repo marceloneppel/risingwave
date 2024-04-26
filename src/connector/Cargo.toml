@@ -32,6 +32,7 @@ auto_enums = { workspace = true }
 auto_impl = "1"
 aws-config = { workspace = true }
 aws-credential-types = { workspace = true }
+aws-sdk-glue = { workspace = true }
 aws-sdk-kinesis = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 aws-smithy-http = { workspace = true }
