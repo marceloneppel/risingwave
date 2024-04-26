@@ -28,7 +28,7 @@ use crate::parser::unified::avro::{
     avro_extract_field_schema, avro_schema_skip_union, AvroAccess, AvroParseOptions,
 };
 use crate::parser::unified::AccessImpl;
-use crate::parser::{AccessBuilder, EncodingProperties, EncodingType};
+use crate::parser::{AccessBuilder, AvroHeaderProps, EncodingProperties, EncodingType};
 use crate::schema::schema_registry::{
     extract_schema_id, get_subject_by_strategy, handle_sr_list, Client,
 };
@@ -103,7 +103,13 @@ impl DebeziumAvroParserConfig {
     pub async fn new(encoding_config: EncodingProperties) -> ConnectorResult<Self> {
         let avro_config = try_match_expand!(encoding_config, EncodingProperties::Avro)?;
         let schema_location = &avro_config.row_schema_location;
-        let client_config = &avro_config.client_config;
+        let AvroHeaderProps::Confluent {
+            client_config,
+            name_strategy: _,
+        } = &avro_config.header_props
+        else {
+            unreachable!()
+        };
         let kafka_topic = &avro_config.topic;
         let url = handle_sr_list(schema_location)?;
         let client = Client::new(url, client_config)?;

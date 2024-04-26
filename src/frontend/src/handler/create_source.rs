@@ -153,7 +153,10 @@ async fn extract_avro_table_schema(
     } else {
         if let risingwave_connector::parser::EncodingProperties::Avro(avro_props) =
             &parser_config.encoding_config
-            && !avro_props.use_schema_registry
+            && matches!(
+                avro_props.header_props,
+                risingwave_connector::parser::AvroHeaderProps::File { .. }
+            )
             && !format_encode_options
                 .get("with_deprecated_file_header")
                 .is_some_and(|v| v == "true")

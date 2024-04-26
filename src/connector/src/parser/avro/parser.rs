@@ -27,7 +27,7 @@ use crate::error::ConnectorResult;
 use crate::parser::unified::avro::{AvroAccess, AvroParseOptions};
 use crate::parser::unified::AccessImpl;
 use crate::parser::util::bytes_from_url;
-use crate::parser::{AccessBuilder, EncodingProperties, EncodingType};
+use crate::parser::{AccessBuilder, AvroHeaderProps, EncodingProperties, EncodingType};
 use crate::schema::schema_registry::{
     extract_schema_id, get_subject_by_strategy, handle_sr_list, Client,
 };
@@ -119,53 +119,60 @@ impl AvroParserConfig {
         let schema_location = &avro_config.row_schema_location;
         let enable_upsert = avro_config.enable_upsert;
         let url = handle_sr_list(schema_location.as_str())?;
-        if avro_config.use_schema_registry {
-            let client = Client::new(url, &avro_config.client_config)?;
-            let resolver = ConfluentSchemaResolver::new(client);
+        match &avro_config.header_props {
+            AvroHeaderProps::Confluent {
+                client_config,
+                name_strategy,
+            } => {
+                let client = Client::new(url, client_config)?;
+                let resolver = ConfluentSchemaResolver::new(client);
 
-            let subject_key = if enable_upsert {
-                Some(get_subject_by_strategy(
-                    &avro_config.name_strategy,
-                    avro_config.topic.as_str(),
-                    avro_config.key_record_name.as_deref(),
-                    true,
-                )?)
-            } else {
-                if let Some(name) = &avro_config.key_record_name {
-                    bail!("key.message = {name} not used");
-                }
-                None
-            };
-            let subject_value = get_subject_by_strategy(
-                &avro_config.name_strategy,
-                avro_config.topic.as_str(),
-                avro_config.record_name.as_deref(),
-                false,
-            )?;
-            tracing::debug!("infer key subject {subject_key:?}, value subject {subject_value}");
-
-            Ok(Self {
-                schema: resolver.get_by_subject_name(&subject_value).await?,
-                key_schema: if let Some(subject_key) = subject_key {
-                    Some(resolver.get_by_subject_name(&subject_key).await?)
+                let subject_key = if enable_upsert {
+                    Some(get_subject_by_strategy(
+                        name_strategy,
+                        avro_config.topic.as_str(),
+                        avro_config.key_record_name.as_deref(),
+                        true,
+                    )?)
                 } else {
+                    if let Some(name) = &avro_config.key_record_name {
+                        bail!("key.message = {name} not used");
+                    }
                     None
-                },
-                schema_resolver: AvroHeader::Confluent(Arc::new(resolver)),
-            })
-        } else {
-            if enable_upsert {
-                bail!("avro upsert without schema registry is not supported");
+                };
+                let subject_value = get_subject_by_strategy(
+                    name_strategy,
+                    avro_config.topic.as_str(),
+                    avro_config.record_name.as_deref(),
+                    false,
+                )?;
+                tracing::debug!("infer key subject {subject_key:?}, value subject {subject_value}");
+
+                Ok(Self {
+                    schema: resolver.get_by_subject_name(&subject_value).await?,
+                    key_schema: if let Some(subject_key) = subject_key {
+                        Some(resolver.get_by_subject_name(&subject_key).await?)
+                    } else {
+                        None
+                    },
+                    schema_resolver: AvroHeader::Confluent(Arc::new(resolver)),
+                })
             }
-            let url = url.first().unwrap();
-            let schema_content = bytes_from_url(url, avro_config.aws_auth_props.as_ref()).await?;
-            let schema = Schema::parse_reader(&mut schema_content.as_slice())
-                .context("failed to parse avro schema")?;
-            Ok(Self {
-                schema: Arc::new(schema),
-                key_schema: None,
-                schema_resolver: AvroHeader::File,
-            })
+            AvroHeaderProps::File { aws_auth_props } => {
+                if enable_upsert {
+                    bail!("avro upsert without schema registry is not supported");
+                }
+                let url = url.first().unwrap();
+                let schema_content = bytes_from_url(url, aws_auth_props.as_ref()).await?;
+                let schema = Schema::parse_reader(&mut schema_content.as_slice())
+                    .context("failed to parse avro schema")?;
+                Ok(Self {
+                    schema: Arc::new(schema),
+                    key_schema: None,
+                    schema_resolver: AvroHeader::File,
+                })
+            }
+            AvroHeaderProps::Glue { aws_auth_props: _ } => unreachable!(),
         }
     }
 
