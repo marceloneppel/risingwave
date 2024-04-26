@@ -1034,7 +1034,7 @@ pub enum AvroHeaderProps {
         name_strategy: PbSchemaRegistryNameStrategy,
     },
     Glue {
-        aws_auth_props: Option<AwsAuthProps>,
+        aws_auth_props: AwsAuthProps,
     },
 }
 impl Default for AvroHeaderProps {
@@ -1160,13 +1160,11 @@ impl SpecificParserConfig {
                             .unwrap(),
                     };
                 } else {
-                    config.header_props = AvroHeaderProps::File {
-                        aws_auth_props: Some(
-                            serde_json::from_value::<AwsAuthProps>(
-                                serde_json::to_value(info.format_encode_options.clone()).unwrap(),
-                            )
-                            .map_err(|e| anyhow::anyhow!(e))?,
-                        ),
+                    config.header_props = AvroHeaderProps::Glue {
+                        aws_auth_props: serde_json::from_value::<AwsAuthProps>(
+                            serde_json::to_value(info.format_encode_options.clone()).unwrap(),
+                        )
+                        .map_err(|e| anyhow::anyhow!(e))?,
                     };
                 }
                 EncodingProperties::Avro(config)

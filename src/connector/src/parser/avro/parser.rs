@@ -22,6 +22,7 @@ use risingwave_common::{bail, try_match_expand};
 use risingwave_pb::plan_common::ColumnDesc;
 
 use super::confluent_resolver::ConfluentSchemaResolver;
+use super::glue_resolver::GlueSchemaResolver;
 use super::util::avro_schema_to_column_descs;
 use crate::error::ConnectorResult;
 use crate::parser::unified::avro::{AvroAccess, AvroParseOptions};
@@ -93,6 +94,22 @@ impl AvroAccessBuilder {
                     None => bail!("avro parse unexpected eof"),
                 }
             }
+            AvroHeader::Glue(resolver) => {
+                assert!(payload.len() >= 18);
+                // let header_version = payload[0];
+                // let compression = payload[1];
+                let schema_version_id = uuid::Uuid::from_slice(&payload[2..18]).unwrap();
+                // eprintln!(">>>> {schema_version_id}");
+                let writer_schema = resolver.get(schema_version_id).await?;
+                let mut raw_payload = &payload[18..];
+                let rr = from_avro_datum(
+                    writer_schema.as_ref(),
+                    &mut raw_payload,
+                    Some(reader_schema),
+                )?;
+                // eprintln!("{rr:#?}");
+                Ok(rr)
+            }
         }
     }
 }
@@ -107,7 +124,7 @@ pub struct AvroParserConfig {
 #[derive(Debug, Clone)]
 enum AvroHeader {
     Confluent(Arc<ConfluentSchemaResolver>),
-    // Glue(...)
+    Glue(Arc<GlueSchemaResolver>),
     File,
     // SingleObject,
     // Fixed & None,
@@ -172,7 +189,22 @@ impl AvroParserConfig {
                     schema_resolver: AvroHeader::File,
                 })
             }
-            AvroHeaderProps::Glue { aws_auth_props: _ } => unreachable!(),
+            AvroHeaderProps::Glue { aws_auth_props } => {
+                let client = aws_sdk_glue::Client::new(&aws_auth_props.build_config().await?);
+                let resolver = GlueSchemaResolver::new(client);
+                if enable_upsert {
+                    bail!("avro upsert without schema registry is not supported");
+                }
+                let url = url.first().unwrap();
+                let schema_content = bytes_from_url(url, None).await?;
+                let schema = Schema::parse_reader(&mut schema_content.as_slice())
+                    .context("failed to parse avro schema")?;
+                Ok(Self {
+                    schema: Arc::new(schema),
+                    key_schema: None,
+                    schema_resolver: AvroHeader::Glue(Arc::new(resolver)),
+                })
+            }
         }
     }
 

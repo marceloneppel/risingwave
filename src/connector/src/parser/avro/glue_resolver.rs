@@ -14,16 +14,55 @@
 
 use std::sync::Arc;
 
-// use anyhow::Context;
+use anyhow::Context;
 use apache_avro::Schema;
+use aws_sdk_glue::Client;
 use moka::future::Cache;
 
-// use crate::error::ConnectorResult;
+use crate::error::ConnectorResult;
 
 #[derive(Debug)]
-pub struct ConfluentSchemaResolver {
-    writer_schemas: Cache<i32, Arc<Schema>>,
-    // confluent_client: Client,
+pub struct GlueSchemaResolver {
+    writer_schemas: Cache<uuid::Uuid, Arc<Schema>>,
+    glue_client: Client,
 }
 
-impl ConfluentSchemaResolver {}
+impl GlueSchemaResolver {
+    /// Create a new `GlueSchemaResolver`
+    pub fn new(client: Client) -> Self {
+        Self {
+            writer_schemas: Cache::new(u64::MAX),
+            glue_client: client,
+        }
+    }
+
+    // get the writer schema by id
+    pub async fn get(&self, schema_version_id: uuid::Uuid) -> ConnectorResult<Arc<Schema>> {
+        if let Some(schema) = self.writer_schemas.get(&schema_version_id).await {
+            Ok(schema)
+        } else {
+            let r = self
+                .glue_client
+                .get_schema_version()
+                .schema_version_id(schema_version_id)
+                .send()
+                .await
+                .context("glue sdk error")?;
+            self.parse_and_cache_schema(schema_version_id, r.schema_definition().unwrap())
+                .await
+        }
+    }
+
+    async fn parse_and_cache_schema(
+        &self,
+        schema_version_id: uuid::Uuid,
+        content: &str,
+    ) -> ConnectorResult<Arc<Schema>> {
+        let schema = Schema::parse_str(content).context("failed to parse avro schema")?;
+        let schema = Arc::new(schema);
+        self.writer_schemas
+            .insert(schema_version_id, Arc::clone(&schema))
+            .await;
+        Ok(schema)
+    }
+}
