@@ -54,11 +54,15 @@ public class DbzConnectorConfig {
     public static final String PG_PUB_CREATE = "publication.create.enable";
     public static final String PG_SCHEMA_NAME = "schema.name";
 
+    /* SQL Server configs */
+    public static final String  SQL_SERVER_SERVER_NAME = "server.name";
+
     /* RisingWave configs */
     private static final String DBZ_CONFIG_FILE = "debezium.properties";
     private static final String MYSQL_CONFIG_FILE = "mysql.properties";
     private static final String POSTGRES_CONFIG_FILE = "postgres.properties";
     private static final String MONGODB_CONFIG_FILE = "mongodb.properties";
+    private static final String SQL_SERVER_CONFIG_FILE = "sql_server.properties";
 
     private static final String DBZ_PROPERTY_PREFIX = "debezium.";
 
@@ -240,6 +244,12 @@ public class DbzConnectorConfig {
             mongodbProps.setProperty("name", connectorName);
 
             dbzProps.putAll(mongodbProps);
+
+        } else if (source == SourceTypeE.SQL_SERVER) {
+            var sqlServerProps = initiateDbConfig(SQL_SERVER_CONFIG_FILE, substitutor);
+
+            dbzProps.putAll(mongodbProps);
+
 
         } else {
             throw new RuntimeException("unsupported source type: " + source);

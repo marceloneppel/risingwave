@@ -180,6 +180,9 @@ impl<T: CdcSourceTypeTrait> SplitReader for CdcSplitReader<T> {
                 source_ctx,
                 rx,
             },
+            CdcSourceType::SqlServer => {
+                todo!("WKXTODO sql server cdc source")
+            }
             CdcSourceType::Unspecified => {
                 unreachable!();
             }
