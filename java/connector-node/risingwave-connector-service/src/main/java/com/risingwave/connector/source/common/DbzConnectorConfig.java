@@ -247,10 +247,32 @@ public class DbzConnectorConfig {
 
         } else if (source == SourceTypeE.SQL_SERVER) {
             var sqlServerProps = initiateDbConfig(SQL_SERVER_CONFIG_FILE, substitutor);
+            if (isCdcBackfill) {
+                // skip the initial snapshot for cdc backfill
+                sqlServerProps.setProperty("snapshot.mode", "never");
 
-            dbzProps.putAll(mongodbProps);
-
-
+                // if startOffset is specified, we should continue
+                // reading changes from the given offset
+                if (null != startOffset && !startOffset.isBlank()) {
+                    sqlServerProps.setProperty(
+                            ConfigurableOffsetBackingStore.OFFSET_STATE_VALUE, startOffset);
+                }
+            } else {
+                // if snapshot phase is finished and offset is specified, we will continue reading
+                // changes from the given offset
+                if (snapshotDone && null != startOffset && !startOffset.isBlank()) {
+                    sqlServerProps.setProperty("snapshot.mode", "never");
+                    sqlServerProps.setProperty(
+                            ConfigurableOffsetBackingStore.OFFSET_STATE_VALUE, startOffset);
+                }
+            }
+            dbzProps.putAll(sqlServerProps);
+            if (isCdcSourceJob) {
+                // remove table filtering for the shared Postgres source, since we
+                // allow user to ingest tables in different schemas
+                LOG.info("Disable table filtering for the shared Postgres source");
+                dbzProps.remove("table.include.list");
+            }
         } else {
             throw new RuntimeException("unsupported source type: " + source);
         }
