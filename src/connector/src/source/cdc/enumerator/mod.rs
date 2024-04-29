@@ -184,6 +184,10 @@ impl ListCdcSplits for DebeziumSplitEnumerator<SqlServer> {
     type CdcSourceType = SqlServer;
 
     fn list_cdc_splits(&mut self) -> Vec<DebeziumCdcSplit<Self::CdcSourceType>> {
-        todo!("WKXTODO sql server cdc source enumerator")
+        vec![DebeziumCdcSplit::<Self::CdcSourceType>::new(
+            self.source_id,
+            None,
+            None,
+        )]
     }
 }

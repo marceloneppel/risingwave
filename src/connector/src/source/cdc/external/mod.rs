@@ -14,6 +14,7 @@
 
 pub mod mock_external_table;
 mod postgres;
+mod sql_server;
 
 #[cfg(not(madsim))]
 mod maybe_tls_connector;
@@ -40,6 +41,7 @@ use crate::error::{ConnectorError, ConnectorResult};
 use crate::parser::mysql_row_to_owned_row;
 use crate::source::cdc::external::mock_external_table::MockExternalTableReader;
 use crate::source::cdc::external::postgres::{PostgresExternalTableReader, PostgresOffset};
+use crate::source::cdc::external::sql_server::{SqlServerExternalTableReader, SqlServerOffset};
 use crate::WithPropertiesExt;
 
 #[derive(Debug)]
@@ -47,6 +49,7 @@ pub enum CdcTableType {
     Undefined,
     MySql,
     Postgres,
+    SqlServer,
     Citus,
 }
 
@@ -57,12 +60,13 @@ impl CdcTableType {
             "mysql-cdc" => Self::MySql,
             "postgres-cdc" => Self::Postgres,
             "citus-cdc" => Self::Citus,
+            "sqlserver-cdc" => Self::SqlServer,
             _ => Self::Undefined,
         }
     }
 
     pub fn can_backfill(&self) -> bool {
-        matches!(self, Self::MySql | Self::Postgres)
+        matches!(self, Self::MySql | Self::Postgres | Self::SqlServer)
     }
 
     pub async fn create_table_reader(
@@ -76,6 +80,9 @@ impl CdcTableType {
             )),
             Self::Postgres => Ok(ExternalTableReaderImpl::Postgres(
                 PostgresExternalTableReader::new(with_properties, schema).await?,
+            )),
+            Self::SqlServer => Ok(ExternalTableReaderImpl::SqlServer(
+                SqlServerExternalTableReader::new(with_properties, schema).await?,
             )),
             _ => bail!("invalid external table type: {:?}", *self),
         }
@@ -141,6 +148,7 @@ impl MySqlOffset {
 pub enum CdcOffset {
     MySql(MySqlOffset),
     Postgres(PostgresOffset),
+    SqlServer(SqlServerOffset),
 }
 
 // Example debezium offset for Postgres:
@@ -224,6 +232,7 @@ pub trait ExternalTableReader {
 pub enum ExternalTableReaderImpl {
     MySql(MySqlExternalTableReader),
     Postgres(PostgresExternalTableReader),
+    SqlServer(SqlServerExternalTableReader),
     Mock(MockExternalTableReader),
 }
 
@@ -509,6 +518,9 @@ impl ExternalTableReader for ExternalTableReaderImpl {
             ExternalTableReaderImpl::Postgres(postgres) => {
                 postgres.get_normalized_table_name(table_name)
             }
+            ExternalTableReaderImpl::SqlServer(sql_server) => {
+                sql_server.get_normalized_table_name(table_name)
+            }
             ExternalTableReaderImpl::Mock(mock) => mock.get_normalized_table_name(table_name),
         }
     }
@@ -517,6 +529,7 @@ impl ExternalTableReader for ExternalTableReaderImpl {
         match self {
             ExternalTableReaderImpl::MySql(mysql) => mysql.current_cdc_offset().await,
             ExternalTableReaderImpl::Postgres(postgres) => postgres.current_cdc_offset().await,
+            ExternalTableReaderImpl::SqlServer(sql_server) => sql_server.current_cdc_offset().await,
             ExternalTableReaderImpl::Mock(mock) => mock.current_cdc_offset().await,
         }
     }
@@ -539,6 +552,9 @@ impl ExternalTableReaderImpl {
             ExternalTableReaderImpl::Postgres(_) => {
                 PostgresExternalTableReader::get_cdc_offset_parser()
             }
+            ExternalTableReaderImpl::SqlServer(_) => {
+                SqlServerExternalTableReader::get_cdc_offset_parser()
+            }
             ExternalTableReaderImpl::Mock(_) => MockExternalTableReader::get_cdc_offset_parser(),
         }
     }
@@ -557,6 +573,9 @@ impl ExternalTableReaderImpl {
             }
             ExternalTableReaderImpl::Postgres(postgres) => {
                 postgres.snapshot_read(table_name, start_pk, primary_keys, limit)
+            }
+            ExternalTableReaderImpl::SqlServer(sql_server) => {
+                sql_server.snapshot_read(table_name, start_pk, primary_keys, limit)
             }
             ExternalTableReaderImpl::Mock(mock) => {
                 mock.snapshot_read(table_name, start_pk, primary_keys, limit)

@@ -1,33 +1,33 @@
 ---
 version: "3"
 services:
-  risingwave-standalone:
-    extends:
-      file: ../../docker/docker-compose.yml
-      service: risingwave-standalone
-  etcd-0:
-    extends:
-      file: ../../docker/docker-compose.yml
-      service: etcd-0
-  grafana-0:
-    extends:
-      file: ../../docker/docker-compose.yml
-      service: grafana-0
-  minio-0:
-    extends:
-      file: ../../docker/docker-compose.yml
-      service: minio-0
-  prometheus-0:
-    extends:
-      file: ../../docker/docker-compose.yml
-      service: prometheus-0
+  # risingwave-standalone:
+  #   extends:
+  #     file: ../../docker/docker-compose.yml
+  #     service: risingwave-standalone
+  # etcd-0:
+  #   extends:
+  #     file: ../../docker/docker-compose.yml
+  #     service: etcd-0
+  # grafana-0:
+  #   extends:
+  #     file: ../../docker/docker-compose.yml
+  #     service: grafana-0
+  # minio-0:
+  #   extends:
+  #     file: ../../docker/docker-compose.yml
+  #     service: minio-0
+  # prometheus-0:
+  #   extends:
+  #     file: ../../docker/docker-compose.yml
+  #     service: prometheus-0
   message_queue:
     extends:
       file: ../../docker/docker-compose.yml
       service: message_queue
 
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2017-latest
+    image: mcr.microsoft.com/mssql/server:2019-latest
     platform: linux/amd64
     environment:
       SA_PASSWORD: "YourPassword123"
@@ -74,15 +74,15 @@ services:
 volumes:
   message_queue:
     external: false
-  risingwave-standalone:
-    external: false
-  etcd-0:
-    external: false
-  grafana-0:
-    external: false
-  minio-0:
-    external: false
-  prometheus-0:
-    external: false
+  # risingwave-standalone:
+  #   external: false
+  # etcd-0:
+  #   external: false
+  # grafana-0:
+  #   external: false
+  # minio-0:
+  #   external: false
+  # prometheus-0:
+  #   external: false
 
-name: risingwave-compose
+# name: risingwave-compose

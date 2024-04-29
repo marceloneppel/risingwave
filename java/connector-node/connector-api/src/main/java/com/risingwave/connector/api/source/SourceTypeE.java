@@ -33,6 +33,8 @@ public enum SourceTypeE {
             case CITUS:
                 return SourceTypeE.CITUS;
             case MONGODB:
+                return SourceTypeE.MONGODB;
+            case SQL_SERVER:
                 return SourceTypeE.SQL_SERVER;
             default:
                 return SourceTypeE.INVALID;

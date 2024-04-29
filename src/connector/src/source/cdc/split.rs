@@ -221,7 +221,14 @@ impl CdcSplitTrait for MongoDbCdcSplit {
 
 impl SqlServerCdcSplit {
     pub fn new(split_id: u32, start_offset: Option<String>) -> Self {
-        todo!("WKXTODO SqlServerCdcSplit new")
+        let split = CdcSplitBase {
+            split_id,
+            start_offset,
+            snapshot_done: false,
+        };
+        Self {
+            inner: split,
+        }
     }
 }
 
@@ -340,7 +347,8 @@ impl<T: CdcSourceTypeTrait> DebeziumCdcSplit<T> {
                 ret.mongodb_split = Some(split);
             }
             CdcSourceType::SqlServer => {
-                todo!("WKXTODO DebeziumCdcSplit new")
+                let split = SqlServerCdcSplit::new(split_id, start_offset);
+                ret.sql_server_split = Some(split);
             }
             CdcSourceType::Unspecified => {
                 unreachable!("invalid debezium split")

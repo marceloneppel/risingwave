@@ -110,6 +110,8 @@ public class DbzSourceUtils {
             return waitForStreamingRunningInner("mysql", dbServerName);
         } else if (sourceType == SourceTypeE.POSTGRES) {
             return waitForStreamingRunningInner("postgres", dbServerName);
+        } else if (sourceType == SourceTypeE.SQL_SERVER) {
+            return waitForStreamingRunningInner("sqlserver", dbServerName);
         } else {
             LOG.info("Unsupported backfill source, just return true for {}", dbServerName);
             return true;

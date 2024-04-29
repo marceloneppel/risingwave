@@ -180,9 +180,17 @@ impl<T: CdcSourceTypeTrait> SplitReader for CdcSplitReader<T> {
                 source_ctx,
                 rx,
             },
-            CdcSourceType::SqlServer => {
-                todo!("WKXTODO sql server cdc source")
-            }
+            CdcSourceType::SqlServer => Self {
+                source_id: split.split_id() as u64,
+                start_offset: split.start_offset().clone(),
+                server_addr: None,
+                conn_props,
+                split_id,
+                snapshot_done: split.snapshot_done(),
+                parser_config,
+                source_ctx,
+                rx,
+            },
             CdcSourceType::Unspecified => {
                 unreachable!();
             }

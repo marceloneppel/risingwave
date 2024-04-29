@@ -41,6 +41,7 @@ use risingwave_connector::sink::iceberg::IcebergConfig;
 use risingwave_connector::source::cdc::{
     CDC_SHARING_MODE_KEY, CDC_SNAPSHOT_BACKFILL, CDC_SNAPSHOT_MODE_KEY, CDC_TRANSACTIONAL_KEY,
     CITUS_CDC_CONNECTOR, MONGODB_CDC_CONNECTOR, MYSQL_CDC_CONNECTOR, POSTGRES_CDC_CONNECTOR,
+    SQL_SERVER_CDC_CONNECTOR,
 };
 use risingwave_connector::source::datagen::DATAGEN_CONNECTOR;
 use risingwave_connector::source::iceberg::ICEBERG_CONNECTOR;
@@ -1038,7 +1039,12 @@ static CONNECTORS_COMPATIBLE_FORMATS: LazyLock<HashMap<String, HashMap<Format, V
                 ),
                 ICEBERG_CONNECTOR => hashmap!(
                     Format::None => vec![Encode::None],
-                )
+                ),
+                SQL_SERVER_CDC_CONNECTOR => hashmap!(
+                    Format::Debezium => vec![Encode::Json],
+                    // support source stream job
+                    Format::Plain => vec![Encode::Json],
+                ),
         ))
     });
 

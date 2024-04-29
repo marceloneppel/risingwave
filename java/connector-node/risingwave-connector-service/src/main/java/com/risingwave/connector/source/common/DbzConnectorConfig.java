@@ -54,9 +54,6 @@ public class DbzConnectorConfig {
     public static final String PG_PUB_CREATE = "publication.create.enable";
     public static final String PG_SCHEMA_NAME = "schema.name";
 
-    /* SQL Server configs */
-    public static final String  SQL_SERVER_SERVER_NAME = "server.name";
-
     /* RisingWave configs */
     private static final String DBZ_CONFIG_FILE = "debezium.properties";
     private static final String MYSQL_CONFIG_FILE = "mysql.properties";
