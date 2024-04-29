@@ -31,22 +31,9 @@ wait_kafka_exit() {
   done
 }
 
-wait_zookeeper_exit() {
-  # Follow zookeeper-server-stop.sh
-  while [[ -n "$(ps ax | grep java | grep -i QuorumPeerMain | grep -v grep | awk '{print $1}')" ]]; do
-    echo "Waiting for zookeeper to exit"
-    sleep 1
-  done
-}
-
 kill_kafka() {
   $KAFKA_PATH/bin/kafka-server-stop.sh
   wait_kafka_exit
-}
-
-kill_zookeeper() {
-  $KAFKA_PATH/bin/zookeeper-server-stop.sh
-  wait_zookeeper_exit
 }
 
 wait_for_process() {
@@ -78,7 +65,6 @@ kill_cluster() {
   # Kill other components
   $TMUX list-windows -t risedev -F "#{window_name} #{pane_id}" |
     grep -v 'kafka' |
-    grep -v 'zookeeper' |
     awk '{ print $2 }' |
     xargs -I {} $TMUX send-keys -t {} C-c C-d
 
@@ -86,9 +72,6 @@ kill_cluster() {
   if [[ -n $($TMUX list-windows -t risedev | grep kafka) ]]; then
     echo "kill kafka"
     kill_kafka
-
-    echo "kill zookeeper"
-    kill_zookeeper
 
     # Kill their tmux sessions
     $TMUX list-windows -t risedev -F "#{pane_id}" | xargs -I {} $TMUX send-keys -t {} C-c C-d
