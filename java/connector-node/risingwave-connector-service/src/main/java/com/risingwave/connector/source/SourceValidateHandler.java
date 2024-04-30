@@ -159,6 +159,7 @@ public class SourceValidateHandler {
                 break;
             case SQL_SERVER:
                 ensureRequiredProps(props, isCdcSourceJob);
+                ensurePropNotBlank(props, DbzConnectorConfig.SQL_SERVER_SCHEMA_NAME);
                 try (var sqlServerValidator =
                         new SqlServerValidator(props, tableSchema, isCdcSourceJob)) {
                     sqlServerValidator.validateAll();

@@ -1125,6 +1125,13 @@ pub fn validate_compatibility(
             props.insert("publication.create.enable".into(), "true".into());
         }
     }
+
+    if connector == SQL_SERVER_CDC_CONNECTOR {
+        if !props.contains_key("schema.name") {
+            // Default schema name is "dbo"
+            props.insert("schema.name".into(), "dbo".into());
+        }
+    }
     Ok(())
 }
 

@@ -34,6 +34,7 @@ public class SqlServerValidator extends DatabaseValidator implements AutoCloseab
 
     private final String user;
     private final String dbName;
+    private final String schemaName;
     private final String tableName;
 
     // Whether the properties to validate is shared by multiple tables.
@@ -41,7 +42,7 @@ public class SqlServerValidator extends DatabaseValidator implements AutoCloseab
     private final boolean isCdcSourceJob;
 
     public SqlServerValidator(
-            Map<String, String> userProps, TableSchema tableSchema, boolean isCdcSourceJob, String dbPort)
+            Map<String, String> userProps, TableSchema tableSchema, boolean isCdcSourceJob)
             throws SQLException {
         this.userProps = userProps;
         this.tableSchema = tableSchema;
@@ -55,12 +56,12 @@ public class SqlServerValidator extends DatabaseValidator implements AutoCloseab
                 String.format(
                         "jdbc:sqlserver://%s:%s;databaseName=%s;user=%s;password=%s;encrypt=false",
                         dbHost, dbPort, dbName, user, password);
-        LOG.info("WKXLOG jdbcUrl: {}", jdbcUrl);
 
         this.jdbcConnection = DriverManager.getConnection(jdbcUrl, user, password);
 
         this.dbName = dbName;
         this.user = user;
+        this.schemaName = userProps.get(DbzConnectorConfig.SQL_SERVER_SCHEMA_NAME);
         this.tableName = userProps.get(DbzConnectorConfig.TABLE_NAME);
         this.isCdcSourceJob = isCdcSourceJob;
     }
