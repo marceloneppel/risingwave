@@ -326,6 +326,11 @@ impl<S: StateStore, Src: OpendalSource> FsFetchExecutor<S, Src> {
                                     .unwrap();
                             debug_assert_eq!(mapping.len(), 1);
                             if let Some((split_id, offset)) = mapping.into_iter().next() {
+                                tracing::info!(
+                                    "Split {} has been read up to offset {}",
+                                    split_id,
+                                    offset
+                                );
                                 let row = state_store_handler
                                     .get(split_id.clone())
                                     .await?
