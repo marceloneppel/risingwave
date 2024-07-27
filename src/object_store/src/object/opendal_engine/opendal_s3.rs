@@ -44,6 +44,13 @@ impl OpendalObjectStore {
             builder.enable_virtual_host_style();
         }
 
+        // if let Ok(batch_max_operations) = std::env::var("RW_BATCH_MAX_OPERATIONS") {
+        //     builder.batch_max_operations(batch_max_operations.parse().unwrap());
+        // }
+        // if std::env::var("RW_DISABLE_STAT_WITH_OVERRIDE").is_ok() {
+        //     builder.disable_stat_with_override();
+        // }
+
         let http_client = Self::new_http_client(&config)?;
         builder.http_client(http_client);
 

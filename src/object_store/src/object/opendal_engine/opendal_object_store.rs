@@ -120,6 +120,9 @@ impl ObjectStore for OpendalObjectStore {
                 .range(range.map(|v| *v as u64))
                 .await?
         };
+        if range.is_full() {
+            tracing::error!("full range read: {} - {:?} - {:?}", path, data, data.to_bytes());
+        }
 
         if let Some(len) = range.len()
             && len != data.len()
@@ -376,10 +379,32 @@ impl OpendalStreamingUploader {
 impl StreamingUploader for OpendalStreamingUploader {
     async fn write_bytes(&mut self, data: Bytes) -> ObjectResult<()> {
         assert!(self.is_valid);
-        self.not_uploaded_len += data.len();
-        self.buf.push(data);
-        if self.not_uploaded_len >= Self::UPLOAD_BUFFER_SIZE {
-            self.flush().await?;
+        if true {
+            let parts_to_upload_len = self.not_uploaded_len + data.len();
+            if parts_to_upload_len < Self::UPLOAD_BUFFER_SIZE {
+                // Store everything and flush later.
+                self.not_uploaded_len += data.len();
+                self.buf.push(data);
+            } else if parts_to_upload_len == Self::UPLOAD_BUFFER_SIZE {
+                // Store everything and flush now.
+                self.buf.push(data);
+                self.flush().await?;
+            } else {
+                // Split the data and store the first part, then flush.
+                let data_part_to_upload_now = data.clone().into_iter().take(Self::UPLOAD_BUFFER_SIZE - self.not_uploaded_len).collect::<Bytes>();
+                let data_part_to_upload_later = data.clone().into_iter().skip(data_part_to_upload_now.len()).collect::<Bytes>();
+                self.buf.push(data_part_to_upload_now);
+                self.flush().await?;
+                // Store the rest of the data and flush later.
+                self.not_uploaded_len = data_part_to_upload_later.len();
+                self.buf.push(data_part_to_upload_later);
+            }
+        } else {
+            self.not_uploaded_len += data.len();
+            self.buf.push(data);
+            if self.not_uploaded_len >= Self::UPLOAD_BUFFER_SIZE {
+                self.flush().await?;
+            }
         }
         Ok(())
     }
